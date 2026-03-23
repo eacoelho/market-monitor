@@ -1,0 +1,20 @@
+[Unit]
+Description=Market Monitor — Alertas de Câmbio e Commodities
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/market-monitor
+ExecStart=/home/ubuntu/market-monitor/venv/bin/python monitor.py
+Restart=always
+RestartSec=30
+StandardOutput=journal
+StandardError=journal
+
+# Reinicia automaticamente se travar por mais de 5 minutos
+TimeoutStartSec=60
+
+[Install]
+WantedBy=multi-user.target
