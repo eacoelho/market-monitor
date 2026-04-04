@@ -1,6 +1,7 @@
 """
 price_fetcher.py
 Busca preços e calcula variação intraday via Yahoo Finance (yfinance).
+Usa history() em vez de fast_info — mais estável contra mudanças de API.
 """
 
 import yfinance as yf
@@ -14,20 +15,21 @@ logger = logging.getLogger(__name__)
 def get_intraday_variation(ticker: str) -> Optional[dict]:
     """
     Retorna variação percentual do ativo desde a abertura do pregão atual.
-
-    Returns:
-        dict com ticker, preco_atual, abertura, variacao_pct, horario
-        None se não conseguir buscar os dados
+    Usa period='1d' + interval='1m' para pegar abertura e último preço do dia.
     """
     try:
         t    = yf.Ticker(ticker)
-        info = t.fast_info
+        hist = t.history(period="1d", interval="1m")
 
-        preco_atual = info.last_price
-        abertura    = info.open
+        if hist.empty or len(hist) < 2:
+            logger.warning(f"Histórico vazio ou insuficiente para {ticker}")
+            return None
 
-        if not preco_atual or not abertura or abertura == 0:
-            logger.warning(f"Dados inválidos para {ticker}: preco={preco_atual}, abertura={abertura}")
+        abertura    = float(hist["Open"].iloc[0])   # Primeiro candle do dia
+        preco_atual = float(hist["Close"].iloc[-1])  # Último candle disponível
+
+        if abertura == 0:
+            logger.warning(f"Abertura zero para {ticker}")
             return None
 
         variacao_pct = ((preco_atual - abertura) / abertura) * 100
