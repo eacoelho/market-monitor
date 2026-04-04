@@ -1,27 +1,18 @@
 """
 notifier.py
-Envia alertas via WhatsApp usando CallMeBot (API gratuita).
-Documentação: https://www.callmebot.com/blog/free-api-whatsapp-messages/
+Envia alertas via Telegram Bot API.
 """
 
 import requests
-import urllib.parse
 import logging
 from datetime import datetime
-from config import CALLMEBOT_PHONE, CALLMEBOT_APIKEY
+from config import TELEGRAM_TOKEN, TELEGRAM_CHAT_ID
 
 logger = logging.getLogger(__name__)
-
-CALLMEBOT_URL = "https://api.callmebot.com/whatsapp.php"
+TELEGRAM_URL = "https://api.telegram.org/bot{token}/sendMessage"
 
 
 def enviar_alerta(nome, ticker, variacao, preco, abertura, analise) -> bool:
-    """
-    Monta e envia a mensagem de alerta via WhatsApp (CallMeBot).
-
-    Returns:
-        True se enviado com sucesso, False caso contrário.
-    """
     if   variacao >=  3: emoji = "🚀"
     elif variacao >=  1: emoji = "🟢"
     elif variacao <= -3: emoji = "💥"
@@ -31,56 +22,54 @@ def enviar_alerta(nome, ticker, variacao, preco, abertura, analise) -> bool:
     sinal   = "+" if variacao > 0 else ""
     horario = datetime.now().strftime("%d/%m %H:%M")
 
-    msg = f"""{emoji} *ALERTA DE MERCADO* {emoji}
-━━━━━━━━━━━━━━━━━━━
-*{nome}*
-📊 Variação: *{sinal}{variacao:.2f}%* no intraday
-💰 Preço atual: *{_fmt(ticker, preco)}*
-📂 Abertura: {_fmt(ticker, abertura)}
-🕐 Horário: {horario}
-━━━━━━━━━━━━━━━━━━━
-{analise}
-━━━━━━━━━━━━━━━━━━━
-_⚙️ Monitor automático — verifique antes de operar._"""
+    msg = (
+        f"{emoji} *ALERTA DE MERCADO* {emoji}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"*{nome}*\n"
+        f"📊 Variação: *{sinal}{variacao:.2f}%* no intraday\n"
+        f"💰 Preço atual: *{_fmt(ticker, preco)}*\n"
+        f"📂 Abertura: {_fmt(ticker, abertura)}\n"
+        f"🕐 Horário: {horario}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"{analise}\n"
+        f"━━━━━━━━━━━━━━━━━━━\n"
+        f"_⚙️ Monitor automático — verifique antes de operar._"
+    )
 
-    try:
-        url = (
-            f"{CALLMEBOT_URL}"
-            f"?phone={CALLMEBOT_PHONE}"
-            f"&text={urllib.parse.quote(msg)}"
-            f"&apikey={CALLMEBOT_APIKEY}"
-        )
-        r = requests.get(url, timeout=15)
-        return r.status_code == 200
-    except Exception as e:
-        logger.error(f"Erro ao enviar WhatsApp: {e}")
-        return False
+    return _enviar(msg)
 
 
 def enviar_heartbeat() -> bool:
-    """Envia mensagem diária confirmando que o robô está ativo."""
     msg = (
         f"🤖 *Monitor de Mercado — Ativo*\n"
         f"✅ Robô rodando normalmente\n"
         f"🕐 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
         f"_Alertas serão enviados conforme variações detectadas._"
     )
+    return _enviar(msg)
+
+
+def _enviar(msg: str) -> bool:
     try:
-        url = (
-            f"{CALLMEBOT_URL}"
-            f"?phone={CALLMEBOT_PHONE}"
-            f"&text={urllib.parse.quote(msg)}"
-            f"&apikey={CALLMEBOT_APIKEY}"
+        r = requests.post(
+            TELEGRAM_URL.format(token=TELEGRAM_TOKEN),
+            json={
+                "chat_id":    TELEGRAM_CHAT_ID,
+                "text":       msg,
+                "parse_mode": "Markdown",
+            },
+            timeout=15,
         )
-        r = requests.get(url, timeout=15)
-        return r.status_code == 200
+        if r.status_code == 200:
+            return True
+        logger.error(f"Telegram erro {r.status_code}: {r.text[:200]}")
+        return False
     except Exception as e:
-        logger.error(f"Erro no heartbeat: {e}")
+        logger.error(f"Erro ao enviar Telegram: {e}")
         return False
 
 
 def _fmt(ticker: str, preco: float) -> str:
-    """Formata preço de acordo com o tipo de ativo."""
     if "BRL"  in ticker:           return f"R$ {preco:.4f}"
     if "BTC"  in ticker:           return f"$ {preco:,.2f}"
     if ticker in ("GC=F", "SI=F"): return f"$ {preco:,.2f}/oz"
