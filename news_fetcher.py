@@ -18,39 +18,37 @@ logger = logging.getLogger(__name__)
 #  FEEDS RSS GRATUITOS                                                 #
 # ------------------------------------------------------------------ #
 RSS_FEEDS = {
-    # Macro global
     "macro": [
         "https://feeds.reuters.com/reuters/businessNews",
-        "https://feeds.reuters.com/reuters/companyNews",
-        "https://www.investing.com/rss/news_25.rss",          # Forex
-        "https://www.investing.com/rss/news_11.rss",          # Commodities
-        "https://feeds.content.dowjones.io/public/rss/mw_realtimeheadlines",  # MarketWatch
+        "https://feeds.reuters.com/reuters/topNews",
+        "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
+        "https://www.investing.com/rss/news_25.rss",
+        "https://www.investing.com/rss/news_11.rss",
     ],
-    # Brasil / BRL
     "brasil": [
-        "https://www.investing.com/rss/news_285.rss",         # Brasil
+        "https://www.investing.com/rss/news_285.rss",
         "https://feeds.reuters.com/reuters/latamTopNews",
+        "https://braziljournal.com/feed/",
     ],
-    # Commodities agrícolas
     "agro": [
         "https://www.investing.com/rss/news_11.rss",
         "https://feeds.reuters.com/reuters/commoditiesNews",
+        "https://www.agweb.com/rss.xml",
     ],
-    # Energia / petróleo
     "energia": [
         "https://feeds.reuters.com/reuters/energyNews",
         "https://www.investing.com/rss/news_11.rss",
+        "https://oilprice.com/rss/main",
     ],
-    # Ouro / metais
     "metais": [
         "https://feeds.reuters.com/reuters/commoditiesNews",
         "https://www.investing.com/rss/news_11.rss",
+        "https://www.kitco.com/rss/kitco-news.xml",
     ],
-    # Crypto
     "crypto": [
-        "https://feeds.reuters.com/reuters/technologyNews",
         "https://cointelegraph.com/rss",
         "https://coindesk.com/arc/outboundfeeds/rss/",
+        "https://feeds.reuters.com/reuters/technologyNews",
     ],
 }
 
