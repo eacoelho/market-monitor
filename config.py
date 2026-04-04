@@ -2,31 +2,36 @@
 #  CONFIGURAÇÕES DO MONITOR — edite aqui para personalizar
 # ============================================================
 
-# --- Perplexity API ---
-PERPLEXITY_API_KEY = "SUA_CHAVE_PERPLEXITY_AQUI"  # https://www.perplexity.ai/settings/api
+# --- Provider de IA ---
+# "gemini" → Google Gemini 2.0 Flash (1.500 req/dia grátis)
+# "groq"   → Groq Llama 3.3 70B     (14.400 req/dia grátis)
+AI_PROVIDER = "gemini"
+
+# --- Chaves de API (preencha apenas o provider que for usar) ---
+GEMINI_API_KEY = "SUA_CHAVE_GEMINI_AQUI"   # https://aistudio.google.com/apikey
+GROQ_API_KEY   = "SUA_CHAVE_GROQ_AQUI"     # https://console.groq.com/keys
 
 # --- CallMeBot WhatsApp ---
-# Siga: https://www.callmebot.com/blog/free-api-whatsapp-messages/
-# 1. Adicione +34 644 44 74 67 nos seus contatos
-# 2. Envie "I allow callmebot to send me messages" no WhatsApp para esse número
-# 3. Você receberá uma apikey por mensagem
-CALLMEBOT_PHONE  = "5511999999999"   # Seu número com DDI, sem + e sem espaços
+# Setup: https://www.callmebot.com/blog/free-api-whatsapp-messages/
+# 1. Salve +34 644 44 74 67 nos contatos
+# 2. Envie "I allow callmebot to send me messages" por WhatsApp
+# 3. Aguarde a apikey chegar (~2 min)
+CALLMEBOT_PHONE  = "5511999999999"          # DDI + número, sem + nem espaços
 CALLMEBOT_APIKEY = "SUA_APIKEY_CALLMEBOT_AQUI"
 
-# --- Intervalo de verificação ---
-CHECK_INTERVAL_MINUTES = 5           # A cada quantos minutos verificar
+# --- Intervalo e horário de operação ---
+CHECK_INTERVAL_MINUTES = 5
+HORARIO_INICIO         = "08:00"
+HORARIO_FIM            = "22:00"
 
-# --- Horário de operação (evita alertas de madrugada) ---
-HORARIO_INICIO = "08:00"             # Começa a monitorar
-HORARIO_FIM    = "22:00"             # Para de monitorar
+# --- Controle anti-spam ---
+MAX_ALERTAS_POR_HORA = 1                    # Máximo de alertas por ativo por hora
 
 # --- Ativos monitorados ---
-# ticker   : código do Yahoo Finance
-# nome     : nome amigável para a mensagem
 # threshold: variação mínima (%) para disparar alerta
-# tipo     : contexto para a IA entender o ativo
+# tipo     : contexto passado à IA para enriquecer a análise
 ASSETS = {
-    # --- Moedas ---
+    # Moedas
     "USDBRL=X": {
         "nome":      "Dólar / Real (USD/BRL)",
         "threshold": 0.8,
@@ -47,8 +52,7 @@ ASSETS = {
         "threshold": 3.0,
         "tipo":      "criptomoeda líder, sensível a regulação, macro e fluxo de ETFs",
     },
-
-    # --- Commodities ---
+    # Commodities
     "GC=F": {
         "nome":      "Ouro (Gold Futures)",
         "threshold": 1.0,
@@ -80,7 +84,3 @@ ASSETS = {
         "tipo":      "commodity agrícola, sensível ao câmbio brasileiro e produção da Índia",
     },
 }
-
-# --- Controle anti-spam ---
-# Máximo de alertas por ativo por janela de tempo
-MAX_ALERTAS_POR_HORA = 1             # Máximo 1 alerta por ativo a cada hora

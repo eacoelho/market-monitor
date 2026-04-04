@@ -15,119 +15,74 @@ logger = logging.getLogger(__name__)
 CALLMEBOT_URL = "https://api.callmebot.com/whatsapp.php"
 
 
-def enviar_alerta(
-    nome:     str,
-    ticker:   str,
-    variacao: float,
-    preco:    float,
-    abertura: float,
-    analise:  str,
-) -> bool:
+def enviar_alerta(nome, ticker, variacao, preco, abertura, analise) -> bool:
     """
     Monta e envia a mensagem de alerta via WhatsApp (CallMeBot).
 
     Returns:
         True se enviado com sucesso, False caso contrário.
     """
+    if   variacao >=  3: emoji = "🚀"
+    elif variacao >=  1: emoji = "🟢"
+    elif variacao <= -3: emoji = "💥"
+    elif variacao <= -1: emoji = "🔴"
+    else:                emoji = "🟡"
 
-    # --- Emojis e direção ---
-    if variacao >= 3:
-        emoji_dir = "🚀"
-    elif variacao >= 1:
-        emoji_dir = "🟢"
-    elif variacao <= -3:
-        emoji_dir = "💥"
-    elif variacao <= -1:
-        emoji_dir = "🔴"
-    else:
-        emoji_dir = "🟡"
+    sinal   = "+" if variacao > 0 else ""
+    horario = datetime.now().strftime("%d/%m %H:%M")
 
-    direcao_texto = f"+{variacao:.2f}%" if variacao > 0 else f"{variacao:.2f}%"
-    horario       = datetime.now().strftime("%d/%m %H:%M")
-
-    # --- Monta a mensagem ---
-    mensagem = f"""{emoji_dir} *ALERTA DE MERCADO* {emoji_dir}
+    msg = f"""{emoji} *ALERTA DE MERCADO* {emoji}
 ━━━━━━━━━━━━━━━━━━━
 *{nome}*
-📊 Variação: *{direcao_texto}* no intraday
-💰 Preço atual: *{_fmt_preco(ticker, preco)}*
-📂 Abertura: {_fmt_preco(ticker, abertura)}
+📊 Variação: *{sinal}{variacao:.2f}%* no intraday
+💰 Preço atual: *{_fmt(ticker, preco)}*
+📂 Abertura: {_fmt(ticker, abertura)}
 🕐 Horário: {horario}
 ━━━━━━━━━━━━━━━━━━━
 {analise}
 ━━━━━━━━━━━━━━━━━━━
 _⚙️ Monitor automático — verifique antes de operar._"""
 
-    # --- Envia ---
     try:
-        params = {
-            "phone":  CALLMEBOT_PHONE,
-            "text":   mensagem,
-            "apikey": CALLMEBOT_APIKEY,
-        }
-
-        # CallMeBot exige URL encoding da mensagem
         url = (
             f"{CALLMEBOT_URL}"
             f"?phone={CALLMEBOT_PHONE}"
-            f"&text={urllib.parse.quote(mensagem)}"
+            f"&text={urllib.parse.quote(msg)}"
             f"&apikey={CALLMEBOT_APIKEY}"
         )
-
-        response = requests.get(url, timeout=15)
-
-        if response.status_code == 200:
-            logger.info(f"✅ WhatsApp enviado: {nome} {direcao_texto}")
-            return True
-        else:
-            logger.error(f"Erro CallMeBot {response.status_code}: {response.text}")
-            return False
-
-    except requests.exceptions.Timeout:
-        logger.error("Timeout ao enviar WhatsApp")
-        return False
-
+        r = requests.get(url, timeout=15)
+        return r.status_code == 200
     except Exception as e:
-        logger.error(f"Erro inesperado ao enviar WhatsApp: {e}")
+        logger.error(f"Erro ao enviar WhatsApp: {e}")
         return False
 
 
 def enviar_heartbeat() -> bool:
-    """
-    Envia uma mensagem de status diária para confirmar que o robô está rodando.
-    Chamado automaticamente às 08:00 todos os dias.
-    """
-    horario = datetime.now().strftime("%d/%m/%Y %H:%M")
-    mensagem = (
+    """Envia mensagem diária confirmando que o robô está ativo."""
+    msg = (
         f"🤖 *Monitor de Mercado — Ativo*\n"
         f"✅ Robô rodando normalmente\n"
-        f"🕐 {horario}\n"
+        f"🕐 {datetime.now().strftime('%d/%m/%Y %H:%M')}\n"
         f"_Alertas serão enviados conforme variações detectadas._"
     )
-
     try:
         url = (
             f"{CALLMEBOT_URL}"
             f"?phone={CALLMEBOT_PHONE}"
-            f"&text={urllib.parse.quote(mensagem)}"
+            f"&text={urllib.parse.quote(msg)}"
             f"&apikey={CALLMEBOT_APIKEY}"
         )
-        response = requests.get(url, timeout=15)
-        return response.status_code == 200
+        r = requests.get(url, timeout=15)
+        return r.status_code == 200
     except Exception as e:
         logger.error(f"Erro no heartbeat: {e}")
         return False
 
 
-def _fmt_preco(ticker: str, preco: float) -> str:
+def _fmt(ticker: str, preco: float) -> str:
     """Formata preço de acordo com o tipo de ativo."""
-    if "BRL" in ticker:
-        return f"R$ {preco:.4f}"
-    elif "BTC" in ticker or "ETH" in ticker:
-        return f"$ {preco:,.2f}"
-    elif ticker in ("GC=F", "SI=F"):
-        return f"$ {preco:,.2f}/oz"
-    elif ticker == "CL=F":
-        return f"$ {preco:,.2f}/bbl"
-    else:
-        return f"$ {preco:.4f}"
+    if "BRL"  in ticker:           return f"R$ {preco:.4f}"
+    if "BTC"  in ticker:           return f"$ {preco:,.2f}"
+    if ticker in ("GC=F", "SI=F"): return f"$ {preco:,.2f}/oz"
+    if ticker == "CL=F":           return f"$ {preco:,.2f}/bbl"
+    return f"$ {preco:.4f}"

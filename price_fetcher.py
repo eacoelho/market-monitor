@@ -20,7 +20,7 @@ def get_intraday_variation(ticker: str) -> Optional[dict]:
         None se não conseguir buscar os dados
     """
     try:
-        t = yf.Ticker(ticker)
+        t    = yf.Ticker(ticker)
         info = t.fast_info
 
         preco_atual = info.last_price
@@ -44,17 +44,3 @@ def get_intraday_variation(ticker: str) -> Optional[dict]:
     except Exception as e:
         logger.error(f"Erro ao buscar preço de {ticker}: {e}")
         return None
-
-
-def formatar_preco(ticker: str, preco: float) -> str:
-    """Formata o preço de acordo com o tipo de ativo."""
-    if "BRL" in ticker:
-        return f"R$ {preco:.4f}"
-    elif "BTC" in ticker or "ETH" in ticker:
-        return f"$ {preco:,.2f}"
-    elif ticker in ("GC=F", "SI=F"):
-        return f"$ {preco:,.2f}/oz"
-    elif ticker in ("CL=F",):
-        return f"$ {preco:,.2f}/bbl"
-    else:
-        return f"$ {preco:.4f}"

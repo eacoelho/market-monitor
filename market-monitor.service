@@ -12,8 +12,6 @@ Restart=always
 RestartSec=30
 StandardOutput=journal
 StandardError=journal
-
-# Reinicia automaticamente se travar por mais de 5 minutos
 TimeoutStartSec=60
 
 [Install]
