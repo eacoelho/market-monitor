@@ -106,7 +106,6 @@ def _chamar_gemini(prompt: str, tentativas: int = 3) -> str | None:
 
 
 def _chamar_groq(prompt: str, tentativas: int = 3) -> str | None:
-    """Chama Groq com retry automático em caso de 429."""
     payload = {
         "model":    "llama-3.3-70b-versatile",
         "messages": [
@@ -129,8 +128,12 @@ def _chamar_groq(prompt: str, tentativas: int = 3) -> str | None:
                 timeout=30,
             )
 
+            # Log completo do erro para diagnóstico
+            if response.status_code != 200:
+                logger.error(f"Groq HTTP {response.status_code}: {response.text[:300]}")
+
             if response.status_code == 429:
-                espera = 10 * tentativa  # 10s, 20s, 30s
+                espera = 10 * tentativa
                 logger.warning(f"Groq 429 — aguardando {espera}s (tentativa {tentativa}/{tentativas})")
                 time.sleep(espera)
                 continue
@@ -138,16 +141,14 @@ def _chamar_groq(prompt: str, tentativas: int = 3) -> str | None:
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"].strip()
 
-        except requests.exceptions.HTTPError:
-            logger.error(f"Groq HTTP {response.status_code}: {response.text[:150]}")
+        except requests.exceptions.HTTPError as e:
+            logger.error(f"Groq HTTPError: {e} | Body: {response.text[:300]}")
             return None
         except Exception as e:
-            logger.error(f"Groq erro inesperado: {e}")
+            logger.error(f"Groq erro inesperado: {type(e).__name__}: {e}")
             return None
 
-    logger.error("Groq esgotou tentativas de retry")
     return None
-
 
 def _classificar_intensidade(v: float) -> str:
     if v >= 5:   return "movimento EXTREMO"
