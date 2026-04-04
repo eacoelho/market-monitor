@@ -16,8 +16,8 @@ GROQ_API_KEY   = "SUA_CHAVE_GROQ_AQUI"     # https://console.groq.com/keys
 # 1. Salve +34 644 44 74 67 nos contatos
 # 2. Envie "I allow callmebot to send me messages" por WhatsApp
 # 3. Aguarde a apikey chegar (~2 min)
-CALLMEBOT_PHONE  = "5511999999999"          # DDI + número, sem + nem espaços
-CALLMEBOT_APIKEY = "SUA_APIKEY_CALLMEBOT_AQUI"
+TELEGRAM_TOKEN   = "SEU_NOVO_TOKEN_AQUI"   # Token novo gerado pelo BotFather
+TELEGRAM_CHAT_ID = "8100324093"
 
 # --- Intervalo e horário de operação ---
 CHECK_INTERVAL_MINUTES = 5
