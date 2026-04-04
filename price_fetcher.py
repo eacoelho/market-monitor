@@ -13,18 +13,22 @@ logger = logging.getLogger(__name__)
 
 
 def get_intraday_variation(ticker: str) -> Optional[dict]:
+    """
+    Retorna variação percentual do ativo desde a abertura do pregão atual.
+    Retorna None se o mercado estiver fechado ou sem dados do dia.
+    """
     try:
-        t    = yf.Ticker(ticker)  # Sem session — yfinance gerencia sozinho agora
+        t    = yf.Ticker(ticker)
         hist = t.history(period="1d", interval="1m")
 
         if hist.empty:
             logger.info(f"{ticker}: sem dados (mercado fechado ou fora do pregão)")
             return None
 
-        # Filtra apenas candles de hoje
-        hoje = date.today()
-        hist.index  = hist.index.tz_convert("America/Sao_Paulo")
-        hist_hoje   = hist[hist.index.date == hoje]
+        # Filtra apenas candles de hoje no horário de Brasília
+        hoje      = date.today()
+        hist.index = hist.index.tz_convert("America/Sao_Paulo")
+        hist_hoje  = hist[hist.index.date == hoje]
 
         if len(hist_hoje) < 2:
             logger.info(f"{ticker}: sem candles de hoje — mercado fechado")
@@ -34,6 +38,7 @@ def get_intraday_variation(ticker: str) -> Optional[dict]:
         preco_atual = float(hist_hoje["Close"].iloc[-1])
 
         if abertura == 0:
+            logger.warning(f"{ticker}: abertura zerada, ignorando")
             return None
 
         variacao_pct = ((preco_atual - abertura) / abertura) * 100

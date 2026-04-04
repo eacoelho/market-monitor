@@ -1,7 +1,7 @@
 """
 monitor.py
 Loop principal do robô de monitoramento de ativos.
-Verifica preços a cada N minutos e dispara alertas via WhatsApp
+Verifica preços a cada N minutos e dispara alertas via Telegram
 quando a variação intraday superar o threshold configurado.
 """
 
@@ -17,7 +17,6 @@ from price_fetcher import get_intraday_variation
 from ai_analyst    import gerar_analise
 from notifier      import enviar_alerta, enviar_heartbeat
 
-# --- Logging ---
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(message)s",
@@ -29,7 +28,6 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# --- Controle anti-spam ---
 historico_alertas: dict = defaultdict(list)
 
 
@@ -46,7 +44,6 @@ def _pode_alertar(ticker: str) -> bool:
 
 
 def verificar_ativos():
-    """Função principal — chamada a cada N minutos pelo scheduler."""
     if not _dentro_do_horario():
         logger.debug(f"Fora do horário ({HORARIO_INICIO}–{HORARIO_FIM}). Pulando.")
         return
@@ -57,7 +54,6 @@ def verificar_ativos():
     for ticker, cfg in ASSETS.items():
         dados = get_intraday_variation(ticker)
         if dados is None:
-            logger.warning(f"  ⚠️  {cfg['nome']}: sem dados")
             continue
 
         variacao = dados["variacao_pct"]
@@ -84,7 +80,7 @@ def verificar_ativos():
         else:
             logger.error(f"  ❌ Falha ao enviar: {cfg['nome']}")
 
-        time.sleep(8)  # Pausa entre chamadas à API
+        time.sleep(8)  # Pausa entre chamadas à API (evita rate limit)
 
     if alertas_disparados == 0:
         logger.info("  → Nenhum alerta disparado nesta rodada.")

@@ -12,7 +12,8 @@ logger = logging.getLogger(__name__)
 TELEGRAM_URL = "https://api.telegram.org/bot{token}/sendMessage"
 
 
-def enviar_alerta(nome, ticker, variacao, preco, abertura, analise) -> bool:
+def enviar_alerta(nome: str, ticker: str, variacao: float, preco: float, abertura: float, analise: str) -> bool:
+    """Monta e envia alerta de variação de ativo via Telegram."""
     if   variacao >=  3: emoji = "🚀"
     elif variacao >=  1: emoji = "🟢"
     elif variacao <= -3: emoji = "💥"
@@ -40,6 +41,7 @@ def enviar_alerta(nome, ticker, variacao, preco, abertura, analise) -> bool:
 
 
 def enviar_heartbeat() -> bool:
+    """Mensagem diária confirmando que o robô está ativo."""
     msg = (
         f"🤖 *Monitor de Mercado — Ativo*\n"
         f"✅ Robô rodando normalmente\n"

@@ -1,8 +1,8 @@
 """
 news_fetcher.py
-Busca headlines reais e gratuitas via RSS (Reuters, Investing.com, etc.)
+Busca headlines reais via RSS gratuito (Reuters, Investing.com, OilPrice, Kitco, etc.)
 e filtra as mais relevantes para cada ativo antes de passar ao LLM.
-Sem API key necessária — 100% gratuito.
+Sem API key — 100% gratuito.
 """
 
 import feedparser
@@ -15,7 +15,7 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 # ------------------------------------------------------------------ #
-#  FEEDS RSS GRATUITOS                                                 #
+#  FEEDS RSS POR CATEGORIA                                             #
 # ------------------------------------------------------------------ #
 RSS_FEEDS = {
     "macro": [
@@ -52,7 +52,7 @@ RSS_FEEDS = {
     ],
 }
 
-# Mapeamento ticker → categorias de feed a consultar
+# Mapeamento ticker → categorias de feed
 TICKER_FEEDS = {
     "USDBRL=X": ["macro", "brasil"],
     "EURBRL=X": ["macro", "brasil"],
@@ -80,27 +80,23 @@ TICKER_KEYWORDS = {
     "SB=F":     ["sugar", "açúcar", "cane", "ethanol", "india", "brazil", "brasil"],
 }
 
-# Cache simples em memória para não re-buscar no mesmo ciclo
+# Cache em memória — evita rebuscar feeds no mesmo ciclo de 5 min
 _cache: dict = {}
-CACHE_TTL_SECONDS = 300  # 5 minutos
+CACHE_TTL_SECONDS = 300
 
 
 def buscar_noticias(ticker: str, max_headlines: int = 8) -> str:
     """
-    Busca headlines relevantes para o ativo via RSS gratuito.
-
-    Returns:
-        String formatada com as headlines, pronta para colar no prompt do LLM.
-        Retorna string vazia se não encontrar nada relevante.
+    Busca e filtra headlines relevantes para o ativo via RSS.
+    Retorna string formatada para embutir no prompt do LLM,
+    ou string vazia se não encontrar nada relevante.
     """
     cache_key = f"{ticker}_{int(time.time() // CACHE_TTL_SECONDS)}"
     if cache_key in _cache:
-        logger.debug(f"Cache hit para {ticker}")
         return _cache[cache_key]
 
-    categorias = TICKER_FEEDS.get(ticker, ["macro"])
-    keywords   = [kw.lower() for kw in TICKER_KEYWORDS.get(ticker, [])]
-
+    categorias       = TICKER_FEEDS.get(ticker, ["macro"])
+    keywords         = [kw.lower() for kw in TICKER_KEYWORDS.get(ticker, [])]
     headlines_vistas = set()
     headlines        = []
 
@@ -108,31 +104,27 @@ def buscar_noticias(ticker: str, max_headlines: int = 8) -> str:
         for feed_url in RSS_FEEDS.get(categoria, []):
             try:
                 feed    = feedparser.parse(feed_url)
-                entries = feed.entries[:30]  # Últimas 30 entradas por feed
+                entries = feed.entries[:30]
 
                 for entry in entries:
-                    titulo  = entry.get("title", "").strip()
-                    summary = entry.get("summary", "").strip()
-                    link    = entry.get("link", "")
+                    titulo = entry.get("title", "").strip()
+                    if not titulo:
+                        continue
 
-                    # Deduplicação
                     titulo_lower = titulo.lower()
                     if titulo_lower in headlines_vistas:
                         continue
 
-                    # Filtro por relevância
-                    texto_busca = (titulo_lower + " " + summary.lower())
+                    summary     = entry.get("summary", "").lower()
+                    texto_busca = titulo_lower + " " + summary
                     if not any(kw in texto_busca for kw in keywords):
                         continue
 
-                    # Data de publicação
-                    data_str = _extrair_data(entry)
-
                     headlines_vistas.add(titulo_lower)
                     headlines.append({
-                        "titulo":  titulo,
-                        "data":    data_str,
-                        "fonte":   _extrair_fonte(feed_url),
+                        "titulo": titulo,
+                        "data":   _extrair_data(entry),
+                        "fonte":  _extrair_fonte(feed_url),
                     })
 
             except Exception as e:
@@ -140,22 +132,18 @@ def buscar_noticias(ticker: str, max_headlines: int = 8) -> str:
                 continue
 
     if not headlines:
-        return ""
+        resultado = ""
+    else:
+        resultado = _formatar_headlines(headlines[:max_headlines])
 
-    # Ordena por data (mais recentes primeiro) e limita
-    headlines = headlines[:max_headlines]
-
-    # Formata para o prompt
-    resultado = _formatar_headlines(headlines)
     _cache[cache_key] = resultado
     return resultado
 
 
 def _extrair_data(entry) -> str:
-    """Extrai e formata a data da entrada do feed."""
     try:
         if hasattr(entry, "published_parsed") and entry.published_parsed:
-            dt = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
+            dt       = datetime(*entry.published_parsed[:6], tzinfo=timezone.utc)
             dt_local = dt.astimezone(ZoneInfo("America/Sao_Paulo"))
             return dt_local.strftime("%d/%m %H:%M")
     except Exception:
@@ -164,18 +152,19 @@ def _extrair_data(entry) -> str:
 
 
 def _extrair_fonte(url: str) -> str:
-    """Extrai o nome da fonte a partir da URL do feed."""
-    if "reuters"     in url: return "Reuters"
-    if "investing"   in url: return "Investing.com"
-    if "marketwatch" in url: return "MarketWatch"
+    if "reuters"       in url: return "Reuters"
+    if "investing"     in url: return "Investing.com"
+    if "marketwatch"   in url: return "MarketWatch"
     if "cointelegraph" in url: return "CoinTelegraph"
-    if "coindesk"    in url: return "CoinDesk"
-    if "dowjones"    in url: return "MarketWatch"
+    if "coindesk"      in url: return "CoinDesk"
+    if "oilprice"      in url: return "OilPrice"
+    if "kitco"         in url: return "Kitco"
+    if "agweb"         in url: return "AgWeb"
+    if "braziljournal" in url: return "Brazil Journal"
     return "Feed"
 
 
 def _formatar_headlines(headlines: list) -> str:
-    """Formata as headlines em bloco de texto para o prompt."""
     linhas = ["📡 NOTÍCIAS EM TEMPO REAL (RSS):"]
     for h in headlines:
         linhas.append(f"  [{h['fonte']} — {h['data']}] {h['titulo']}")

@@ -5,9 +5,9 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=ubuntu
-WorkingDirectory=/home/ubuntu/market-monitor
-ExecStart=/home/ubuntu/market-monitor/venv/bin/python monitor.py
+User=root
+WorkingDirectory=/home/market-monitor
+ExecStart=/home/market-monitor/venv/bin/python monitor.py
 Restart=always
 RestartSec=30
 StandardOutput=journal

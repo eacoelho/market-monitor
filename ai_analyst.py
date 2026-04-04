@@ -1,12 +1,14 @@
 """
 ai_analyst.py
-Gemini 2.0 Flash como provider principal, Groq como fallback automático.
-Inclui retry com backoff para lidar com rate limits (429).
+Gera análise fundamentalista usando Gemini ou Groq,
+enriquecida com headlines reais via RSS (news_fetcher).
+Fallback automático: se o provider principal falhar, tenta o outro.
 """
 
 import requests
 import logging
 import time
+from typing import Optional
 from config import AI_PROVIDER, GEMINI_API_KEY, GROQ_API_KEY
 from news_fetcher import buscar_noticias
 
@@ -23,11 +25,14 @@ SYSTEM_PROMPT = (
 
 
 def gerar_analise(nome: str, ticker: str, tipo: str, variacao: float, preco: float) -> str:
+    """
+    Busca notícias via RSS e gera análise com o LLM configurado.
+    Faz fallback automático para o outro provider se o principal falhar.
+    """
     noticias       = buscar_noticias(ticker)
     bloco_noticias = f"\n\n{noticias}" if noticias else "\n\n(Nenhuma headline relevante encontrada agora.)"
     prompt         = _montar_prompt(nome, tipo, variacao, preco, bloco_noticias)
 
-    # Tenta o provider configurado; se falhar por rate limit, cai no outro
     if AI_PROVIDER == "groq":
         resultado = _chamar_groq(prompt)
         if resultado is None:
@@ -39,10 +44,10 @@ def gerar_analise(nome: str, ticker: str, tipo: str, variacao: float, preco: flo
             logger.warning("Gemini falhou — tentando Groq como fallback...")
             resultado = _chamar_groq(prompt)
 
-    return resultado or "⚠️ Análise indisponível no momento. Ambos os providers falharam."
+    return resultado or "⚠️ Análise indisponível — ambos os providers falharam."
 
 
-def _montar_prompt(nome, tipo, variacao, preco, bloco_noticias) -> str:
+def _montar_prompt(nome: str, tipo: str, variacao: float, preco: float, bloco_noticias: str) -> str:
     direcao     = "alta" if variacao > 0 else "baixa"
     intensidade = _classificar_intensidade(abs(variacao))
 
@@ -56,9 +61,9 @@ Com base nas headlines acima, responda EXATAMENTE neste formato:
 [principal driver do movimento, mencionando a fonte quando possível]
 
 📰 *CONTEXTO DO MOMENTO*
-- [Fator 1 — extraído das headlines ou contexto macro]
-- [Fator 2 — contexto macro ou setorial]
-- [Fator 3 — dado técnico ou de fluxo, se aplicável]
+• [Fator 1 — extraído das headlines ou contexto macro]
+• [Fator 2 — contexto macro ou setorial]
+• [Fator 3 — dado técnico ou de fluxo, se aplicável]
 
 🎯 *O QUE MONITORAR AGORA*
 [eventos que podem ampliar ou reverter nas próximas horas]
@@ -69,11 +74,10 @@ Com base nas headlines acima, responda EXATAMENTE neste formato:
 Máximo 180 palavras. Seja técnico e direto."""
 
 
-def _chamar_gemini(prompt: str, tentativas: int = 3) -> str | None:
-    """Chama Gemini com retry automático em caso de 429."""
+def _chamar_gemini(prompt: str, tentativas: int = 3) -> Optional[str]:
     payload = {
-        "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 500},
+        "contents":          [{"parts": [{"text": prompt}]}],
+        "generationConfig":  {"temperature": 0.2, "maxOutputTokens": 500},
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
     }
 
@@ -86,7 +90,7 @@ def _chamar_gemini(prompt: str, tentativas: int = 3) -> str | None:
             )
 
             if response.status_code == 429:
-                espera = 15 * tentativa  # 15s, 30s, 45s
+                espera = 15 * tentativa
                 logger.warning(f"Gemini 429 — aguardando {espera}s (tentativa {tentativa}/{tentativas})")
                 time.sleep(espera)
                 continue
@@ -95,17 +99,17 @@ def _chamar_gemini(prompt: str, tentativas: int = 3) -> str | None:
             return response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
 
         except requests.exceptions.HTTPError:
-            logger.error(f"Gemini HTTP {response.status_code}: {response.text[:150]}")
+            logger.error(f"Gemini HTTP {response.status_code}: {response.text[:200]}")
             return None
         except Exception as e:
-            logger.error(f"Gemini erro inesperado: {e}")
+            logger.error(f"Gemini erro: {e}")
             return None
 
-    logger.error("Gemini esgotou tentativas de retry")
-    return None  # Sinaliza falha para acionar fallback
+    logger.error("Gemini esgotou tentativas")
+    return None
 
 
-def _chamar_groq(prompt: str, tentativas: int = 3) -> str | None:
+def _chamar_groq(prompt: str, tentativas: int = 3) -> Optional[str]:
     payload = {
         "model":    "llama-3.3-70b-versatile",
         "messages": [
@@ -128,27 +132,29 @@ def _chamar_groq(prompt: str, tentativas: int = 3) -> str | None:
                 timeout=30,
             )
 
-            # Log completo do erro para diagnóstico
-            if response.status_code != 200:
-                logger.error(f"Groq HTTP {response.status_code}: {response.text[:300]}")
-
             if response.status_code == 429:
                 espera = 10 * tentativa
                 logger.warning(f"Groq 429 — aguardando {espera}s (tentativa {tentativa}/{tentativas})")
                 time.sleep(espera)
                 continue
 
+            if response.status_code != 200:
+                logger.error(f"Groq HTTP {response.status_code}: {response.text[:200]}")
+                return None
+
             response.raise_for_status()
             return response.json()["choices"][0]["message"]["content"].strip()
 
-        except requests.exceptions.HTTPError as e:
-            logger.error(f"Groq HTTPError: {e} | Body: {response.text[:300]}")
+        except requests.exceptions.HTTPError:
+            logger.error(f"Groq HTTPError: {response.text[:200]}")
             return None
         except Exception as e:
-            logger.error(f"Groq erro inesperado: {type(e).__name__}: {e}")
+            logger.error(f"Groq erro: {type(e).__name__}: {e}")
             return None
 
+    logger.error("Groq esgotou tentativas")
     return None
+
 
 def _classificar_intensidade(v: float) -> str:
     if v >= 5:   return "movimento EXTREMO"
