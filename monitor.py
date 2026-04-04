@@ -84,7 +84,7 @@ def verificar_ativos():
         else:
             logger.error(f"  ❌ Falha ao enviar: {cfg['nome']}")
 
-        time.sleep(2)  # Pausa entre chamadas à API
+        time.sleep(8)  # Pausa entre chamadas à API
 
     if alertas_disparados == 0:
         logger.info("  → Nenhum alerta disparado nesta rodada.")
