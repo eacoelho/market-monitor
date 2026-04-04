@@ -1,35 +1,46 @@
 """
 price_fetcher.py
-Busca preços e calcula variação intraday via Yahoo Finance (yfinance).
-Usa history() em vez de fast_info — mais estável contra mudanças de API.
+Busca preços e calcula variação intraday via yfinance.
+Filtra candles pelo dia atual para evitar variações falsas fora do pregão.
 """
 
 import yfinance as yf
+import requests
 import logging
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 logger = logging.getLogger(__name__)
 
+# Sessão com user-agent de browser
+session = requests.Session()
+session.headers.update({
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+})
+
 
 def get_intraday_variation(ticker: str) -> Optional[dict]:
-    """
-    Retorna variação percentual do ativo desde a abertura do pregão atual.
-    Usa period='1d' + interval='1m' para pegar abertura e último preço do dia.
-    """
     try:
-        t    = yf.Ticker(ticker)
+        t    = yf.Ticker(ticker, session=session)
         hist = t.history(period="1d", interval="1m")
 
-        if hist.empty or len(hist) < 2:
-            logger.warning(f"Histórico vazio ou insuficiente para {ticker}")
+        if hist.empty:
+            logger.warning(f"Histórico vazio para {ticker}")
             return None
 
-        abertura    = float(hist["Open"].iloc[0])   # Primeiro candle do dia
-        preco_atual = float(hist["Close"].iloc[-1])  # Último candle disponível
+        # --- Filtra apenas candles de hoje ---
+        hoje = date.today()
+        hist.index = hist.index.tz_convert("America/Sao_Paulo")
+        hist_hoje  = hist[hist.index.date == hoje]
+
+        if len(hist_hoje) < 2:
+            logger.info(f"{ticker}: mercado fechado ou ainda sem candles de hoje ({len(hist_hoje)} candles)")
+            return None
+
+        abertura    = float(hist_hoje["Open"].iloc[0])
+        preco_atual = float(hist_hoje["Close"].iloc[-1])
 
         if abertura == 0:
-            logger.warning(f"Abertura zero para {ticker}")
             return None
 
         variacao_pct = ((preco_atual - abertura) / abertura) * 100
