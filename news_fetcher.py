@@ -1,7 +1,6 @@
 """
 news_fetcher.py
-Busca headlines reais via RSS gratuito (Reuters, Investing.com, OilPrice, Kitco, etc.)
-e filtra as mais relevantes para cada ativo antes de passar ao LLM.
+Busca headlines reais via RSS gratuito e filtra por relevância para cada ativo.
 Sem API key — 100% gratuito.
 """
 
@@ -10,7 +9,6 @@ import logging
 import time
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
-from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -29,6 +27,19 @@ RSS_FEEDS = {
         "https://www.investing.com/rss/news_285.rss",
         "https://feeds.reuters.com/reuters/latamTopNews",
         "https://braziljournal.com/feed/",
+    ],
+    "acoes_eua": [
+        "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
+        "https://feeds.reuters.com/reuters/businessNews",
+        "https://www.investing.com/rss/news_25.rss",
+    ],
+    "acoes_asia": [
+        "https://feeds.reuters.com/reuters/topNews",
+        "https://www.investing.com/rss/news_95.rss",
+    ],
+    "acoes_europa": [
+        "https://feeds.reuters.com/reuters/topNews",
+        "https://www.investing.com/rss/news_95.rss",
     ],
     "agro": [
         "https://www.investing.com/rss/news_11.rss",
@@ -54,30 +65,74 @@ RSS_FEEDS = {
 
 # Mapeamento ticker → categorias de feed
 TICKER_FEEDS = {
-    "USDBRL=X": ["macro", "brasil"],
-    "EURBRL=X": ["macro", "brasil"],
-    "EURUSD=X": ["macro"],
-    "BTC-USD":  ["crypto", "macro"],
-    "GC=F":     ["metais", "macro"],
-    "SI=F":     ["metais", "macro"],
-    "CL=F":     ["energia", "macro"],
-    "ZC=F":     ["agro", "macro"],
-    "ZS=F":     ["agro", "brasil"],
-    "SB=F":     ["agro", "brasil"],
+    "USDBRL=X":  ["macro", "brasil"],
+    "EURBRL=X":  ["macro", "brasil"],
+    "EURUSD=X":  ["macro"],
+    "BTC-USD":   ["crypto", "macro"],
+    "DX-Y.NYB":  ["macro"],
+    "^VIX":      ["macro", "acoes_eua"],
+    "^GSPC":     ["macro", "acoes_eua"],
+    "^IXIC":     ["macro", "acoes_eua"],
+    "^DJI":      ["macro", "acoes_eua"],
+    "^RUT":      ["macro", "acoes_eua"],
+    "^STOXX50E": ["macro", "acoes_europa"],
+    "^FTSE":     ["macro", "acoes_europa"],
+    "^N225":     ["macro", "acoes_asia"],
+    "000001.SS": ["macro", "acoes_asia"],
+    "^HSI":      ["macro", "acoes_asia"],
+    "^BVSP":     ["macro", "brasil"],
+    "GC=F":      ["metais", "macro"],
+    "SI=F":      ["metais", "macro"],
+    "HG=F":      ["metais", "macro"],
+    "CL=F":      ["energia", "macro"],
+    "BZ=F":      ["energia", "macro"],
+    "NG=F":      ["energia"],
+    "RB=F":      ["energia"],
+    "ZS=F":      ["agro", "brasil"],
+    "ZC=F":      ["agro", "macro"],
+    "ZW=F":      ["agro", "macro"],
+    "ZM=F":      ["agro", "brasil"],
+    "ZL=F":      ["agro", "brasil"],
+    "CT=F":      ["agro", "macro"],
+    "SB=F":      ["agro", "brasil"],
+    "KC=F":      ["agro", "brasil"],
+    "RC=F":      ["agro", "macro"],
 }
 
 # Palavras-chave por ticker para filtrar notícias relevantes
 TICKER_KEYWORDS = {
-    "USDBRL=X": ["real", "brl", "brazil", "brasil", "copom", "lula", "fazenda", "dollar", "fed", "dólar"],
-    "EURBRL=X": ["real", "euro", "eur", "ecb", "bce", "brazil", "brasil"],
-    "EURUSD=X": ["euro", "eur", "dollar", "usd", "fed", "ecb", "bce", "inflation", "rate"],
-    "BTC-USD":  ["bitcoin", "btc", "crypto", "cryptocurrency", "sec", "etf", "blockchain"],
-    "GC=F":     ["gold", "ouro", "fed", "inflation", "rate", "treasury", "yields"],
-    "SI=F":     ["silver", "prata", "metal", "industrial"],
-    "CL=F":     ["oil", "petróleo", "crude", "opec", "opep", "eia", "energy", "brent"],
-    "ZC=F":     ["corn", "milho", "grain", "usda", "crop", "climate", "ethanol"],
-    "ZS=F":     ["soy", "soja", "soybean", "china", "usda", "crop", "brazil", "brasil"],
-    "SB=F":     ["sugar", "açúcar", "cane", "ethanol", "india", "brazil", "brasil"],
+    "USDBRL=X":  ["real", "brl", "brazil", "brasil", "copom", "lula", "fazenda", "dollar", "fed", "dólar"],
+    "EURBRL=X":  ["real", "euro", "eur", "ecb", "bce", "brazil", "brasil"],
+    "EURUSD=X":  ["euro", "eur", "dollar", "usd", "fed", "ecb", "bce", "inflation", "rate"],
+    "BTC-USD":   ["bitcoin", "btc", "crypto", "cryptocurrency", "sec", "etf", "blockchain"],
+    "DX-Y.NYB":  ["dollar", "dxy", "dollar index", "fed", "currency", "forex"],
+    "^VIX":      ["vix", "volatility", "fear", "s&p", "market", "stocks", "risk"],
+    "^GSPC":     ["s&p", "s&p 500", "stocks", "wall street", "equities", "fed", "earnings"],
+    "^IXIC":     ["nasdaq", "tech", "technology", "apple", "microsoft", "nvidia", "meta", "google"],
+    "^DJI":      ["dow jones", "dow", "industrial", "stocks", "wall street"],
+    "^RUT":      ["russell", "small cap", "smallcap", "domestic", "economy"],
+    "^STOXX50E": ["stoxx", "europe", "europa", "ecb", "eurozone", "european"],
+    "^FTSE":     ["ftse", "uk", "britain", "london", "england", "boe", "pound"],
+    "^N225":     ["nikkei", "japan", "japão", "yen", "boj", "tokyo"],
+    "000001.SS": ["shanghai", "china", "chinese", "pboc", "beijing", "yuan", "rmb"],
+    "^HSI":      ["hang seng", "hong kong", "hsi", "china", "chinese"],
+    "^BVSP":     ["ibovespa", "bovespa", "brasil", "brazil", "b3", "selic", "copom"],
+    "GC=F":      ["gold", "ouro", "fed", "inflation", "rate", "treasury", "yields"],
+    "SI=F":      ["silver", "prata", "metal", "industrial"],
+    "HG=F":      ["copper", "cobre", "china", "industrial", "manufacturing"],
+    "CL=F":      ["oil", "crude", "wti", "opec", "opep", "eia", "petróleo", "energy"],
+    "BZ=F":      ["brent", "oil", "crude", "opec", "opep", "middle east", "petróleo"],
+    "NG=F":      ["natural gas", "gas", "lng", "storage", "weather", "winter"],
+    "RB=F":      ["gasoline", "gasolina", "rbob", "refinery", "fuel", "summer"],
+    "ZS=F":      ["soy", "soja", "soybean", "china", "usda", "crop", "brazil", "brasil"],
+    "ZC=F":      ["corn", "milho", "grain", "usda", "crop", "ethanol", "climate"],
+    "ZW=F":      ["wheat", "trigo", "grain", "russia", "ukraine", "usda", "crop"],
+    "ZM=F":      ["soybean meal", "farelo", "meal", "protein", "livestock", "crush"],
+    "ZL=F":      ["soybean oil", "óleo de soja", "biodiesel", "vegetable oil", "crush"],
+    "CT=F":      ["cotton", "algodão", "textile", "india", "china", "usda"],
+    "SB=F":      ["sugar", "açúcar", "cane", "ethanol", "india", "brazil", "brasil"],
+    "KC=F":      ["coffee", "café", "arabica", "brazil", "colombia", "frost", "crop"],
+    "RC=F":      ["robusta", "coffee", "café", "vietnam", "indonesia", "soluble"],
 }
 
 # Cache em memória — evita rebuscar feeds no mesmo ciclo de 5 min
