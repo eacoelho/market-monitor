@@ -1,65 +1,47 @@
 # 🤖 Market Monitor
 
-Monitor automático de moedas e commodities com alertas via Telegram.
-Usa **Groq (Llama 3.3)** ou **Gemini 2.0 Flash** + **RSS gratuito** para análise em tempo real.
-Custo total: **R$ 0,00/mês**.
+Monitor automático de 32 ativos com alertas via Telegram.
+Usa **Gemini 2.0 Flash** ou **Groq (Llama 3.3)** + **RSS gratuito** para análise em tempo real.
+Custo: R$ 0,00/mês.
 
----
-
-## 📁 Arquivos
+## Arquivos
 
 | Arquivo | Função |
 |---|---|
-| `config.py` | ⚙️ Chaves, ativos e thresholds — **edite aqui** |
-| `monitor.py` | Loop principal com scheduler e anti-spam |
-| `price_fetcher.py` | Preços intraday via yfinance |
+| `config.py` | ⚙️ Chaves, ativos, thresholds e horários de pregão |
+| `monitor.py` | Loop principal |
+| `price_fetcher.py` | Preços intraday via yfinance (UTC) |
 | `news_fetcher.py` | Headlines em tempo real via RSS |
-| `ai_analyst.py` | Groq / Gemini com fallback automático |
+| `ai_analyst.py` | Gemini / Groq com fallback automático |
 | `notifier.py` | Alertas via Telegram |
-| `requirements.txt` | Dependências Python |
-| `market-monitor.service` | Serviço systemd para VPS |
 
----
-
-## 🔑 Credenciais necessárias
-
-| Serviço | Onde obter | Custo |
-|---|---|---|
-| Groq API | https://console.groq.com/keys | Grátis |
-| Gemini API | https://aistudio.google.com/apikey | Grátis |
-| Telegram Bot | @BotFather no Telegram | Grátis |
-
----
-
-## 🚀 Deploy no VPS
+## Setup
 
 ```bash
-# 1. Instalar dependências
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
+nano config.py        # preencher chaves
+python monitor.py     # testar
 
-# 2. Editar credenciais
-nano config.py
-
-# 3. Testar
-python monitor.py
-
-# 4. Subir como serviço permanente
+# Produção
 sudo cp market-monitor.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now market-monitor
 ```
 
+## Credenciais
+
+| Serviço | Onde obter |
+|---|---|
+| Gemini API | https://aistudio.google.com/apikey |
+| Groq API | https://console.groq.com/keys |
+| Telegram Bot | @BotFather |
+
 ## Comandos úteis
 
 ```bash
-# Logs em tempo real
 tail -f monitor.log
-
-# Reiniciar após editar config.py
 sudo systemctl restart market-monitor
-
-# Status do serviço
 sudo systemctl status market-monitor
 ```

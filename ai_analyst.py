@@ -1,6 +1,6 @@
 """
 ai_analyst.py
-Gera análise fundamentalista usando Gemini ou Groq,
+Gera análise fundamentalista usando Gemini 2.0 Flash ou Groq (Llama 3.3),
 enriquecida com headlines reais via RSS (news_fetcher).
 Fallback automático: se o provider principal falhar, tenta o outro.
 """
@@ -25,13 +25,9 @@ SYSTEM_PROMPT = (
 
 
 def gerar_analise(nome: str, ticker: str, tipo: str, variacao: float, preco: float) -> str:
-    """
-    Busca notícias via RSS e gera análise com o LLM configurado.
-    Faz fallback automático para o outro provider se o principal falhar.
-    """
-    noticias       = buscar_noticias(ticker)
-    bloco_noticias = f"\n\n{noticias}" if noticias else "\n\n(Nenhuma headline relevante encontrada agora.)"
-    prompt         = _montar_prompt(nome, tipo, variacao, preco, bloco_noticias)
+    noticias = buscar_noticias(ticker)
+    bloco    = f"\n\n{noticias}" if noticias else "\n\n(Sem headlines relevantes no momento.)"
+    prompt   = _montar_prompt(nome, tipo, variacao, preco, bloco)
 
     if AI_PROVIDER == "groq":
         resultado = _chamar_groq(prompt)
@@ -44,34 +40,27 @@ def gerar_analise(nome: str, ticker: str, tipo: str, variacao: float, preco: flo
             logger.warning("Gemini falhou — tentando Groq como fallback...")
             resultado = _chamar_groq(prompt)
 
-    return resultado or "⚠️ Análise indisponível — ambos os providers falharam."
+    return resultado or "⚠️ Análise indisponível no momento."
 
 
 def _montar_prompt(nome: str, tipo: str, variacao: float, preco: float, bloco_noticias: str) -> str:
     direcao     = "alta" if variacao > 0 else "baixa"
-    intensidade = _classificar_intensidade(abs(variacao))
-
-    return f"""Hoje, {nome} está em {direcao} de {abs(variacao):.2f}% no intraday ({intensidade}).
-Preço atual: {preco:.4f} | Contexto do ativo: {tipo}.
-{bloco_noticias}
-
-Com base nas headlines acima, responda EXATAMENTE neste formato:
-
-📌 *CAUSA PRINCIPAL*
-[principal driver do movimento, mencionando a fonte quando possível]
-
-📰 *CONTEXTO DO MOMENTO*
-• [Fator 1 — extraído das headlines ou contexto macro]
-• [Fator 2 — contexto macro ou setorial]
-• [Fator 3 — dado técnico ou de fluxo, se aplicável]
-
-🎯 *O QUE MONITORAR AGORA*
-[eventos que podem ampliar ou reverter nas próximas horas]
-
-⚠️ *NÍVEL DE CONVICÇÃO*
-[Alta / Média / Baixa] — [motivo em 1 linha]
-
-Máximo 180 palavras. Seja técnico e direto."""
+    intensidade = _intensidade(abs(variacao))
+    return (
+        f"Hoje, {nome} está em {direcao} de {abs(variacao):.2f}% no intraday ({intensidade}).\n"
+        f"Preço atual: {preco:.4f} | Contexto: {tipo}."
+        f"{bloco_noticias}\n\n"
+        f"Com base nas headlines acima, responda EXATAMENTE neste formato:\n\n"
+        f"📌 *CAUSA PRINCIPAL*\n"
+        f"[principal driver do movimento, cite a fonte quando possível]\n\n"
+        f"📰 *CONTEXTO DO MOMENTO*\n"
+        f"• [Fator 1]\n• [Fator 2]\n• [Fator 3]\n\n"
+        f"🎯 *O QUE MONITORAR AGORA*\n"
+        f"[eventos que podem ampliar ou reverter o movimento]\n\n"
+        f"⚠️ *NÍVEL DE CONVICÇÃO*\n"
+        f"[Alta / Média / Baixa] — [motivo em 1 linha]\n\n"
+        f"Máximo 180 palavras. Seja técnico e direto."
+    )
 
 
 def _chamar_gemini(prompt: str, tentativas: int = 3) -> Optional[str]:
@@ -80,31 +69,22 @@ def _chamar_gemini(prompt: str, tentativas: int = 3) -> Optional[str]:
         "generationConfig":  {"temperature": 0.2, "maxOutputTokens": 500},
         "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
     }
-
-    for tentativa in range(1, tentativas + 1):
+    for i in range(1, tentativas + 1):
         try:
-            response = requests.post(
-                f"{GEMINI_URL}?key={GEMINI_API_KEY}",
-                json=payload,
-                timeout=30,
-            )
-
-            if response.status_code == 429:
-                espera = 15 * tentativa
-                logger.warning(f"Gemini 429 — aguardando {espera}s (tentativa {tentativa}/{tentativas})")
+            r = requests.post(f"{GEMINI_URL}?key={GEMINI_API_KEY}", json=payload, timeout=30)
+            if r.status_code == 429:
+                espera = 15 * i
+                logger.warning(f"Gemini 429 — aguardando {espera}s ({i}/{tentativas})")
                 time.sleep(espera)
                 continue
-
-            response.raise_for_status()
-            return response.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
-
+            r.raise_for_status()
+            return r.json()["candidates"][0]["content"]["parts"][0]["text"].strip()
         except requests.exceptions.HTTPError:
-            logger.error(f"Gemini HTTP {response.status_code}: {response.text[:200]}")
+            logger.error(f"Gemini HTTP {r.status_code}: {r.text[:150]}")
             return None
         except Exception as e:
             logger.error(f"Gemini erro: {e}")
             return None
-
     logger.error("Gemini esgotou tentativas")
     return None
 
@@ -119,44 +99,35 @@ def _chamar_groq(prompt: str, tentativas: int = 3) -> Optional[str]:
         "temperature": 0.2,
         "max_tokens":  500,
     }
-
-    for tentativa in range(1, tentativas + 1):
+    for i in range(1, tentativas + 1):
         try:
-            response = requests.post(
+            r = requests.post(
                 GROQ_URL,
-                headers={
-                    "Authorization": f"Bearer {GROQ_API_KEY}",
-                    "Content-Type":  "application/json",
-                },
+                headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
                 json=payload,
                 timeout=30,
             )
-
-            if response.status_code == 429:
-                espera = 10 * tentativa
-                logger.warning(f"Groq 429 — aguardando {espera}s (tentativa {tentativa}/{tentativas})")
+            if r.status_code == 429:
+                espera = 10 * i
+                logger.warning(f"Groq 429 — aguardando {espera}s ({i}/{tentativas})")
                 time.sleep(espera)
                 continue
-
-            if response.status_code != 200:
-                logger.error(f"Groq HTTP {response.status_code}: {response.text[:200]}")
+            if r.status_code != 200:
+                logger.error(f"Groq HTTP {r.status_code}: {r.text[:150]}")
                 return None
-
-            response.raise_for_status()
-            return response.json()["choices"][0]["message"]["content"].strip()
-
+            r.raise_for_status()
+            return r.json()["choices"][0]["message"]["content"].strip()
         except requests.exceptions.HTTPError:
-            logger.error(f"Groq HTTPError: {response.text[:200]}")
+            logger.error(f"Groq HTTPError: {r.text[:150]}")
             return None
         except Exception as e:
             logger.error(f"Groq erro: {type(e).__name__}: {e}")
             return None
-
     logger.error("Groq esgotou tentativas")
     return None
 
 
-def _classificar_intensidade(v: float) -> str:
+def _intensidade(v: float) -> str:
     if v >= 5:   return "movimento EXTREMO"
     if v >= 3:   return "movimento FORTE"
     if v >= 1.5: return "movimento RELEVANTE"
