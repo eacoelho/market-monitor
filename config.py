@@ -12,7 +12,7 @@ GROQ_API_KEY   = "SUA_CHAVE_GROQ_AQUI"     # https://console.groq.com/keys
 
 # --- Telegram ---
 TELEGRAM_TOKEN   = "SEU_TOKEN_AQUI"        # Gerado pelo @BotFather
-TELEGRAM_CHAT_ID = "SEU_CANAL_OU_ID_AQUI"        # @username ou ID numérico do canal
+TELEGRAM_CHAT_ID = "SEU_CANAL_AQUI"        # @username ou ID numérico do canal
 
 # --- Intervalo de verificação (minutos) ---
 CHECK_INTERVAL_MINUTES = 5
