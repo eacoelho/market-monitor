@@ -245,10 +245,4 @@ ASSETS = {
         "tipo":      "sensível ao clima no Brasil e Colômbia e demanda global",
         "market":    "ice_softs",
     },
-    "RC=F": {
-        "nome":      "Café Robusta ICE",
-        "threshold": 1.5,
-        "tipo":      "sensível à produção do Vietnã e demanda de café solúvel",
-        "market":    "ice_softs",
-    },
 }
