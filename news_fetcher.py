@@ -86,7 +86,6 @@ TICKER_FEEDS = {
     "CT=F":      ["agro", "macro"],
     "SB=F":      ["agro", "brasil"],
     "KC=F":      ["agro", "brasil"],
-    "RC=F":      ["agro", "macro"],
 }
 
 TICKER_KEYWORDS = {
@@ -121,7 +120,6 @@ TICKER_KEYWORDS = {
     "CT=F":      ["cotton", "algodão", "textile", "india", "china", "usda"],
     "SB=F":      ["sugar", "açúcar", "cane", "ethanol", "india", "brazil", "brasil"],
     "KC=F":      ["coffee", "café", "arabica", "brazil", "colombia", "frost", "crop"],
-    "RC=F":      ["robusta", "coffee", "café", "vietnam", "indonesia", "soluble"],
 }
 
 _cache: dict = {}
