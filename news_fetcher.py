@@ -54,6 +54,8 @@ RSS_FEEDS = {
         "https://www.usda.gov/rss/latest-releases.xml",
         "https://www.usda.gov/rss/latest-blogs.xml",
         "https://www.allagnews.com/feed/",
+        "https://news.google.com/rss/search?q=commodities",
+        "https://news.google.com/rss/search?q=commodity",
     ],
     "agro": [
         "https://news.google.com/rss/search?q=soybean",
