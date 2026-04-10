@@ -80,7 +80,7 @@ TICKER_FEEDS = {
     "^RUT":      ["macro"],
     "^STOXX50E": ["macro"],
     "^FTSE":     ["macro"],
-    "^N225":     ["macro",
+    "^N225":     ["macro"],
     "000001.SS": ["macro"],
     "^HSI":      ["macro"],
     "^BVSP":     ["macro"],
