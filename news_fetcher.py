@@ -14,78 +14,91 @@ logger = logging.getLogger(__name__)
 
 RSS_FEEDS = {
     "macro": [
-        "https://feeds.reuters.com/reuters/businessNews",
-        "https://feeds.reuters.com/reuters/topNews",
-        "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
+        "https://www.investing.com/rss/news.rss",
+        "https://br.investing.com/rss/news.rss",
+        "https://www.investing.com/rss/news_1.rss",
+        "https://br.investing.com/rss/news_1.rss",
+        "https://www.investing.com/rss/news_14.rss",
+        "https://br.investing.com/rss/news_14.rss",
         "https://www.investing.com/rss/news_25.rss",
-    ],
-    "brasil": [
+        "https://br.investing.com/rss/news_25.rss",
+        "https://www.investing.com/rss/news_95.rss",
+        "https://br.investing.com/rss/news_95.rss",
         "https://www.investing.com/rss/news_285.rss",
-        "https://feeds.reuters.com/reuters/latamTopNews",
+        "https://br.investing.com/rss/news_285.rss",
+        "https://www.investing.com/rss/news_289.rss",
+        "https://br.investing.com/rss/news_289.rss",
+        "https://www.investing.com/rss/news_477.rss",
+        "https://br.investing.com/rss/news_477.rss",
+        "https://g1.globo.com/rss/g1/",
+        "https://g1.globo.com/rss/g1/mundo/",
+        "https://g1.globo.com/rss/g1/economia/",
+        "https://g1.globo.com/rss/g1/brasil/",
+        "https://rss.uol.com.br/feed/noticias.xml",
+        "https://rss.uol.com.br/feed/economia.xml",
+        "https://news.google.com/rss",
+        "https://news.google.com/rss?hl=pt-BR&gl=BR&ceid=BR:pt-419",
+        "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
         "https://braziljournal.com/feed/",
     ],
-    "agro": [
-        "https://www.investing.com/rss/news_11.rss",
-        "https://feeds.reuters.com/reuters/commoditiesNews",
-        "https://www.agweb.com/rss.xml",
-    ],
-    "energia": [
-        "https://feeds.reuters.com/reuters/energyNews",
-        "https://www.investing.com/rss/news_11.rss",
-        "https://oilprice.com/rss/main",
-    ],
-    "metais": [
-        "https://feeds.reuters.com/reuters/commoditiesNews",
-        "https://www.investing.com/rss/news_11.rss",
-        "https://www.kitco.com/rss/kitco-news.xml",
-    ],
-    "crypto": [
+    "cripto": [
+        "https://www.investing.com/rss/news_301.rss",
+        "https://br.investing.com/rss/news_301.rss",
         "https://cointelegraph.com/rss",
         "https://coindesk.com/arc/outboundfeeds/rss/",
     ],
-    "acoes": [
-        "https://feeds.marketwatch.com/marketwatch/realtimeheadlines/",
-        "https://feeds.reuters.com/reuters/businessNews",
-        "https://www.investing.com/rss/news_25.rss",
+    "commodities": [
+        "https://www.investing.com/rss/news_11.rss",
+        "https://br.investing.com/rss/news_11.rss",
+        "https://www.usda.gov/rss/home.xml",
+        "https://www.usda.gov/rss/latest-releases.xml",
+        "https://www.usda.gov/rss/latest-blogs.xml",
+        "https://www.allagnews.com/feed/",
     ],
-    "asia": [
-        "https://feeds.reuters.com/reuters/topNews",
-        "https://www.investing.com/rss/news_95.rss",
+    "agro": [
+        "https://news.google.com/rss/search?q=soybean",
+        "https://news.google.com/rss/search?q=soymeal",
+        "https://news.google.com/rss/search?q=soyoil",
+        "https://news.google.com/rss/search?q=corn",
+        "https://news.google.com/rss/search?q=wheat",
+        "https://news.google.com/rss/search?q=cotton",
+        "https://news.google.com/rss/search?q=sugar",
+        "https://news.google.com/rss/search?q=coffee",
     ],
 }
 
 TICKER_FEEDS = {
-    "USDBRL=X":  ["macro", "brasil"],
-    "EURBRL=X":  ["macro", "brasil"],
+    "USDBRL=X":  ["macro"],
+    "EURBRL=X":  ["macro"],
     "EURUSD=X":  ["macro"],
-    "BTC-USD":   ["crypto"],
+    "BTC-USD":   ["cripto"],
     "DX-Y.NYB":  ["macro"],
-    "^VIX":      ["macro", "acoes"],
-    "^GSPC":     ["macro", "acoes"],
-    "^IXIC":     ["macro", "acoes"],
-    "^DJI":      ["macro", "acoes"],
-    "^RUT":      ["macro", "acoes"],
-    "^STOXX50E": ["macro", "acoes"],
-    "^FTSE":     ["macro", "acoes"],
-    "^N225":     ["macro", "asia"],
-    "000001.SS": ["macro", "asia"],
-    "^HSI":      ["macro", "asia"],
-    "^BVSP":     ["macro", "brasil"],
-    "GC=F":      ["metais", "macro"],
-    "SI=F":      ["metais", "macro"],
-    "HG=F":      ["metais", "macro"],
-    "CL=F":      ["energia", "macro"],
-    "BZ=F":      ["energia", "macro"],
-    "NG=F":      ["energia"],
-    "RB=F":      ["energia"],
-    "ZS=F":      ["agro", "brasil"],
-    "ZC=F":      ["agro", "macro"],
-    "ZW=F":      ["agro", "macro"],
-    "ZM=F":      ["agro", "brasil"],
-    "ZL=F":      ["agro", "brasil"],
-    "CT=F":      ["agro", "macro"],
-    "SB=F":      ["agro", "brasil"],
-    "KC=F":      ["agro", "brasil"],
+    "^VIX":      ["macro"],
+    "^GSPC":     ["macro"],
+    "^IXIC":     ["macro"],
+    "^DJI":      ["macro"],
+    "^RUT":      ["macro"],
+    "^STOXX50E": ["macro"],
+    "^FTSE":     ["macro"],
+    "^N225":     ["macro",
+    "000001.SS": ["macro"],
+    "^HSI":      ["macro"],
+    "^BVSP":     ["macro"],
+    "GC=F":      ["macro", "commodities"],
+    "SI=F":      ["macro", "commodities"],
+    "HG=F":      ["macro", "commodities"],
+    "CL=F":      ["macro", "commodities"],
+    "BZ=F":      ["macro", "commodities"],
+    "NG=F":      ["macro", "commodities"],
+    "RB=F":      ["macro", "commodities"],
+    "ZS=F":      ["macro", "commodities", "agro"],
+    "ZC=F":      ["macro", "commodities", "agro"],
+    "ZW=F":      ["macro", "commodities", "agro"],
+    "ZM=F":      ["macro", "commodities", "agro"],
+    "ZL=F":      ["macro", "commodities", "agro"],
+    "CT=F":      ["macro", "commodities", "agro"],
+    "SB=F":      ["macro", "commodities", "agro"],
+    "KC=F":      ["macro", "commodities", "agro"],
 }
 
 TICKER_KEYWORDS = {
@@ -178,15 +191,16 @@ def _extrair_data(entry) -> str:
 
 
 def _extrair_fonte(url: str) -> str:
-    if "reuters"       in url: return "Reuters"
-    if "investing"     in url: return "Investing.com"
-    if "marketwatch"   in url: return "MarketWatch"
+    if "investing"     in url: return "Investing"
+    if "globo"         in url: return "Globo"
+    if "uol"           in url: return "UOL"
+    if "Google"        in url: return "Google News"
+    if "braziljournal" in url: return "Brazil Journal"
+    if "usda"          in url: return "USDA"
+    if "allagnews"     in url: return "AllAgNews"
+    if "braziljournal" in url: return "Brazil Journal"
     if "cointelegraph" in url: return "CoinTelegraph"
     if "coindesk"      in url: return "CoinDesk"
-    if "oilprice"      in url: return "OilPrice"
-    if "kitco"         in url: return "Kitco"
-    if "agweb"         in url: return "AgWeb"
-    if "braziljournal" in url: return "Brazil Journal"
     return "Feed"
 
 
