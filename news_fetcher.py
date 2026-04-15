@@ -11,6 +11,8 @@ import time
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+FEED_TIMEOUT = 10  # segundos máximos por feed
+
 logger = logging.getLogger(__name__)
 
 RSS_FEEDS = {
