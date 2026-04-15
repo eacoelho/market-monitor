@@ -5,6 +5,7 @@ Sem API key — 100% gratuito. Cache de 5 minutos em memória.
 """
 
 import feedparser
+import requests
 import logging
 import time
 from datetime import datetime, timezone
@@ -158,7 +159,11 @@ def buscar_noticias(ticker: str, max_headlines: int = 8) -> str:
     for categoria in categorias:
         for feed_url in RSS_FEEDS.get(categoria, []):
             try:
-                for entry in feedparser.parse(feed_url).entries[:30]:
+                resp = requests.get(feed_url, timeout=FEED_TIMEOUT,
+                headers={"User-Agent": "Mozilla/5.0"})
+                resp.raise_for_status()
+                feed = feedparser.parse(resp.content)
+                for entry in feed.entries[:30]:
                     titulo = entry.get("title", "").strip()
                     if not titulo:
                         continue
